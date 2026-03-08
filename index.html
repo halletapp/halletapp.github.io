@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hallet — Türkiye Bürokrasi Rehberi</title>
+  <meta name="description" content="Resmi işlemlerini kolayca hallettiren, adım adım kişiselleştirilmiş yol haritası sitesi." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & ReactDOM CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel (JSX in browser) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['Playfair Display', 'Georgia', 'serif'],
+            sans: ['DM Sans', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            gold: { DEFAULT: '#c9a84c', light: '#fdf9f0', dark: '#a07830' },
+            ink:  { DEFAULT: '#1a1a1a', soft: '#2d2d2d' },
+            cream:{ DEFAULT: '#f7f4ef', dark: '#ede9e1' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f7f4ef; }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up  { animation: fadeUp .35s ease both; }
+    .spin     { animation: spin .9s linear infinite; }
+
+    .cat-card { transition: transform .15s, box-shadow .15s; }
+    .cat-card:hover { transform: translateX(4px); box-shadow: 4px 0 0 0 #c9a84c; }
+
+    .process-item:hover { background: #fdf9f0; }
+    .link-card  { transition: all .15s; }
+    .link-card:hover { background: #fdf9f0; transform: translateX(2px); }
+    .step-card  { transition: all .2s; }
+    .step-circle{ transition: all .2s; }
+    .cta-btn:hover  { background: #2d2d2d; }
+    .cta-btn:active { transform: scale(.98); }
+    .vote-btn:hover { background:#fdf9e8; border-color:#c9a84c; }
+    .back-btn:hover { background:#ede9e1; }
+    .progress-fill { transition: width .4s ease; }
+
+    textarea:focus { outline:none; border-color:#c9a84c; box-shadow:0 0 0 3px rgba(201,168,76,.15); }
+
+    .hero-dots {
+      background-image: radial-gradient(circle at 1px 1px, rgba(201,168,76,.13) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+
+    @media(max-width:640px){
+      .hero-title { font-size:2.1rem !important; }
+      .info-bar   { flex-direction:column; gap:12px !important; }
+      .info-sep   { display:none !important; }
+    }
+
+    ::-webkit-scrollbar       { width:5px; }
+    ::-webkit-scrollbar-track { background:#f7f4ef; }
+    ::-webkit-scrollbar-thumb { background:#c9a84c; border-radius:2px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ─── DATA ─────────────────────────────────────────────────── */
+const CATEGORIES = [
+  { id:"kimlik",  icon:"🪪", title:"Kimlik & Nüfus",    desc:"Kimlik, pasaport, nüfus cüzdanı işlemleri", color:"#1a6b5e",
+    processes:[
+      {id:"pasaport",         label:"Pasaport çıkartmak / yenilemek"},
+      {id:"nufus_cuzdani",    label:"Nüfus cüzdanı yenilemek"},
+      {id:"ikametgah",        label:"İkametgah belgesi almak"},
+      {id:"adres_degisikligi",label:"Adres değişikliği bildirimi"},
+    ]},
+  { id:"tasit",   icon:"🚗", title:"Araç İşlemleri",    desc:"Alım, satım, tescil, plaka işlemleri", color:"#8b3a0f",
+    processes:[
+      {id:"arac_alim", label:"İkinci el araç satın almak"},
+      {id:"arac_satim",label:"Araç satmak"},
+      {id:"ehliyet",   label:"Ehliyet çıkarmak / yenilemek"},
+      {id:"muayene",   label:"Araç muayenesi yaptırmak"},
+    ]},
+  { id:"konut",   icon:"🏠", title:"Konut & Kiralama",  desc:"Ev kiralama, tapu, kira sözleşmesi", color:"#4a3580",
+    processes:[
+      {id:"ilk_kiralama",  label:"İlk defa ev kiralamak"},
+      {id:"kira_sozlesmesi",label:"Kira sözleşmesi / noterde onaylatmak"},
+      {id:"tapu_devri",    label:"Tapu devir işlemi"},
+      {id:"dask",          label:"DASK sigortası yaptırmak"},
+    ]},
+  { id:"sirket",  icon:"🏢", title:"Şirket Kurma",      desc:"Şahıs, Ltd., A.Ş. kuruluş süreçleri", color:"#0d5f8a",
+    processes:[
+      {id:"sahis_sirketi", label:"Şahıs şirketi kurmak"},
+      {id:"limited_sirket",label:"Limited şirket kurmak"},
+      {id:"vergi_levhasi", label:"Vergi levhası almak"},
+      {id:"sgk_tescil",    label:"SGK işyeri tescili"},
+    ]},
+  { id:"vize",    icon:"✈️", title:"Vize & Seyahat",    desc:"Yurt dışı vize başvuruları", color:"#1a5c2e",
+    processes:[
+      {id:"schengen",        label:"Schengen vizesi başvurusu"},
+      {id:"abd_vize",        label:"ABD vizesi başvurusu"},
+      {id:"uk_vize",         label:"İngiltere vizesi başvurusu"},
+      {id:"telefon_getirme", label:"Yurt dışından telefon getirmek"},
+    ]},
+  { id:"saglik",  icon:"🏥", title:"Sağlık & SGK",      desc:"SGK kayıt, sigorta, sağlık işlemleri", color:"#7a1f3d",
+    processes:[
+      {id:"sgk_kayit",     label:"SGK'ya ilk kez kayıt olmak"},
+      {id:"aile_hekimi",   label:"Aile hekimine kayıt olmak"},
+      {id:"emeklilik",     label:"Emeklilik başvurusu"},
+      {id:"issizlik_maasi",label:"İşsizlik maaşı başvurusu"},
+    ]},
+];
+
+const TIPS = {
+  pasaport:[
+    {user:"Mehmet K.", time:"2 gün önce", loc:"İstanbul", votes:47, tip:"Ataşehir PTT'de randevu almadan gidin, sabah 9'da kuyruk az oluyor."},
+    {user:"Zeynep A.", time:"1 hafta önce",loc:"Ankara",   votes:38, tip:"e-Devlet randevu sistemi bazen hata veriyor, gece 23:00–01:00 arasında deneyin."},
+    {user:"Can T.",    time:"3 gün önce",  loc:"İzmir",    votes:29, tip:"Fotoğrafı PTT'de çektirmeyin, dışarıda ucuz. 'Pasaport fotoğrafı' deyin ve baskı alın."},
+  ],
+  arac_alim:[
+    {user:"Serkan B.", time:"5 gün önce",  loc:"Bursa",    votes:62, tip:"Noterden önce araç borç sorgusunu e-Devlet'ten kendiniz yapın."},
+    {user:"Ayşe M.",   time:"2 hafta önce",loc:"İstanbul", votes:55, tip:"MTV borcu varsa tescil olmaz. Satıcıya 'MTV temiz' garantisini yazılı aldırın."},
+  ],
+  ilk_kiralama:[
+    {user:"Deniz K.",  time:"1 hafta önce",  loc:"İstanbul", votes:71, tip:"Depozito makbuzu alın, 'iadesiz depozito' yazılı sözleşmeye asla imza atmayın."},
+    {user:"Emre Y.",   time:"3 hafta önce",  loc:"Ankara",   votes:44, tip:"Kiracı Hakları Derneği sitesi ücretsiz rehberlik yapıyor, önce oraya bakın."},
+  ],
+  sahis_sirketi:[
+    {user:"Burak Ö.",  time:"4 gün önce",  loc:"İzmir",    votes:83, tip:"Vergi dairesine gitmenize gerek yok, e-Devlet üzerinden başvuruyu tamamen online bitiriyorsunuz."},
+    {user:"Selin A.",  time:"1 hafta önce",loc:"İstanbul", votes:67, tip:"Serbest meslek makbuzu için defterdarlığa gitmeyin, tescilden sonra e-Devlet'ten alınıyor."},
+  ],
+  schengen:[
+    {user:"Hande B.",  time:"3 gün önce",  loc:"İstanbul", votes:91, tip:"VFS Global'de randevu alın, konsolosluk daha uzun bekletebiliyor."},
+    {user:"Mert D.",   time:"1 hafta önce",loc:"Ankara",   votes:77, tip:"Banka dökümleri son 3 aylık olmalı, eski olanlar reddediliyor."},
+  ],
+};
+
+const COST = {
+  pasaport:      {dur:"5–10 iş günü", cost:"₺1.150 (10 yıllık, değerli kağıt dahil)",  links:[{l:"e-Devlet Pasaport Başvurusu",url:"https://www.turkiye.gov.tr/pasaport-basvuru"},{l:"PTT Randevu Al",url:"https://randevu.ptt.gov.tr"}]},
+  nufus_cuzdani: {dur:"3–5 iş günü",  cost:"Ücretsiz",                                  links:[]},
+  arac_alim:     {dur:"1–2 saat",     cost:"Araç değerinin ~%1'i noter + ₺850 tescil",  links:[{l:"Araç Borç Sorgulama",url:"https://www.turkiye.gov.tr/arac-bilgileri-sorgulama"}]},
+  ilk_kiralama:  {dur:"1–3 gün",      cost:"1–2 aylık kira depozito + aidat",            links:[]},
+  sahis_sirketi: {dur:"3–5 iş günü",  cost:"₺0 – ₺500 (damga pulu, oda kaydı)",         links:[{l:"GİB – Vergi Dairesi",url:"https://www.gib.gov.tr"}]},
+  schengen:      {dur:"15–45 gün",    cost:"€90 vize ücreti + ~₺1.200 VFS hizmet",      links:[{l:"VFS Global Randevu",url:"https://visa.vfsglobal.com/tur/tr"}]},
+  default:       {dur:"3–10 iş günü", cost:"İşleme göre değişir",                        links:[]},
+};
+
+/* ─── HEADER ─────────────────────────────────────────────────*/
+function Header({ onReset }) {
+  return (
+    <header className="bg-ink sticky top-0 z-50 border-b-4 border-gold">
+      <div className="max-w-3xl mx-auto px-5 h-14 flex items-center gap-3">
+        <button onClick={onReset} className="flex items-center gap-2">
+          <span className="bg-gold text-ink font-serif font-black text-xl w-8 h-8 flex items-center justify-center">H</span>
+          <span className="text-white font-serif font-black tracking-widest text-base">HALLET</span>
+        </button>
+        <span className="text-gray-500 font-sans text-xs ml-auto hidden sm:block">Türkiye'de işini kolayca hallet</span>
+      </div>
+    </header>
+  );
+}
+
+/* ─── HOME ───────────────────────────────────────────────────*/
+function HomeScreen({ onSelect }) {
+  return (
+    <div className="max-w-3xl mx-auto px-5 py-10 pb-20">
+      {/* Hero */}
+      <div className="hero-dots mb-10 pb-8 border-b border-gray-200 p-4 rounded-sm">
+        <p className="text-gold font-sans font-bold text-xs tracking-widest uppercase mb-4">
+          Belgelerini topla → Sırayı bekle → Hayatına devam et
+        </p>
+        <h1 className="hero-title font-serif font-black leading-none mb-4" style={{fontSize:"3rem",color:"#1a1a1a"}}>
+          Bürokrasiyi<br/>
+          <em style={{fontStyle:"italic",color:"#c9a84c",fontWeight:400}}>bir kez</em> anlat,<br/>
+          hep hatırla.
+        </h1>
+        <p className="font-sans text-base text-gray-500 leading-relaxed max-w-lg">
+          Hangi işlemi yapmak istediğini seç. Durumunu anlat. Sana özel,
+          sıralı ve eksiksiz bir yol haritası çıkaralım.
+        </p>
+      </div>
+
+      {/* Categories */}
+      <p className="text-xs font-sans font-bold tracking-widest text-gold uppercase mb-4">Kategoriler</p>
+      <div className="flex flex-col gap-3 mb-10">
+        {CATEGORIES.map(cat => (
+          <button key={cat.id} onClick={() => onSelect(cat)}
+            className="cat-card flex items-center gap-4 p-4 bg-white border border-gray-200 text-left w-full"
+            style={{borderLeft:`4px solid ${cat.color}`}}>
+            <span className="text-3xl flex-shrink-0">{cat.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-sans font-bold text-base text-ink mb-0.5">{cat.title}</div>
+              <div className="font-sans text-sm text-gray-500 truncate">{cat.desc}</div>
+            </div>
+            <span className="text-gold text-lg font-bold flex-shrink-0">→</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-px bg-gray-200 overflow-hidden border border-gray-200">
+        {[["6","Kategori"],["24+","Süreç"],["100+","İpucu"]].map(([n,l]) => (
+          <div key={l} className="bg-ink py-5 flex flex-col items-center gap-1">
+            <span className="font-serif font-black text-2xl text-gold">{n}</span>
+            <span className="font-sans text-xs text-gray-500 tracking-wide">{l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── PROCESS SELECT ─────────────────────────────────────────*/
+function ProcessScreen({ cat, onBack, onStart }) {
+  const [sel, setSel]       = useState(null);
+  const [sit, setSit]       = useState("");
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 py-8 pb-20 fade-up">
+      <button onClick={onBack} className="back-btn border border-gray-200 bg-white px-4 py-2 text-sm font-sans text-gray-500 mb-6 transition-colors">
+        ← Kategoriler
+      </button>
+
+      {/* Banner */}
+      <div className="flex items-center gap-4 p-5 mb-8" style={{background:cat.color}}>
+        <span className="text-4xl">{cat.icon}</span>
+        <div>
+          <div className="text-white font-sans font-bold text-xl">{cat.title}</div>
+          <div className="text-white/70 font-sans text-sm mt-0.5">{cat.desc}</div>
+        </div>
+      </div>
+
+      {/* Process list */}
+      <p className="text-xs font-sans font-bold tracking-widest text-gold uppercase mb-3">Hangi işlemi yapacaksın?</p>
+      <div className="flex flex-col gap-2 mb-8">
+        {cat.processes.map(p => (
+          <button key={p.id} onClick={() => setSel(p)}
+            className={`process-item flex items-center gap-3 w-full px-4 py-3.5 border font-sans text-base text-left transition-colors
+              ${sel?.id===p.id ? "bg-gold-light border-gold text-ink font-semibold" : "bg-white border-gray-200 text-gray-700"}`}>
+            <span className={`font-bold text-base flex-shrink-0 ${sel?.id===p.id ? "text-gold":"text-gray-300"}`}>
+              {sel?.id===p.id ? "✓":"○"}
+            </span>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Situation */}
+      {sel && (
+        <div className="bg-white border border-gray-200 p-6 fade-up" style={{borderTop:"3px solid #1a1a1a"}}>
+          <p className="text-xs font-sans font-bold tracking-widest text-gold uppercase mb-2">Durumunu anlat</p>
+          <p className="font-sans text-sm text-gray-500 leading-relaxed mb-4">
+            Ne kadar detay verirsen, o kadar kişisel rehber alırsın. Örn:{" "}
+            <em className="text-gray-600">"İlk defa pasaport çıkaracağım, 22 yaşındayım ve öğrenciyim."</em>
+          </p>
+          <textarea
+            className="w-full p-3 border border-gray-200 font-sans text-sm leading-relaxed bg-gray-50 text-ink resize-none mb-4"
+            placeholder={`"${sel.label}" için durumunu yaz...`}
+            value={sit} onChange={e => setSit(e.target.value)} rows={3}
+          />
+          <button
+            className={`cta-btn bg-ink text-gold font-serif font-bold px-7 py-3.5 text-sm tracking-wide transition-all
+              ${!sit.trim() ? "opacity-40 cursor-not-allowed":""}`}
+            disabled={!sit.trim()} onClick={() => onStart(sel, sit)}>
+            Yol Haritamı Oluştur →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── GUIDE ──────────────────────────────────────────────────*/
+function GuideScreen({ cat, process, situation, onBack }) {
+  const [steps,   setSteps]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [checked, setChecked] = useState({});
+  const [tab,     setTab]     = useState("steps");
+  const [votes,   setVotes]   = useState({});
+  const [tipForm, setTipForm] = useState(false);
+  const [newTip,  setNewTip]  = useState("");
+
+  const info  = COST[process.id] || COST.default;
+  const tips  = TIPS[process.id] || [];
+  const done  = Object.values(checked).filter(Boolean).length;
+  const pct   = steps.length ? Math.round(done/steps.length*100) : 0;
+
+  useEffect(() => { fetchSteps(); }, []);
+
+  async function fetchSteps() {
+    setLoading(true); setSteps([]);
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1200,
+          system:`Sen Türkiye'deki bürokratik işlemler için adım adım rehber oluşturan bir asistandsın.
+Kullanıcının durumuna göre kişiselleştirilmiş, net, pratik adımlar üret.
+SADECE geçerli JSON döndür, başka metin ekleme.
+Format:
+{
+  "steps": [
+    {
+      "id": 1,
+      "title": "Adım başlığı",
+      "detail": "Detaylı açıklama",
+      "doc": "Gerekli belgeler (yoksa boş)",
+      "tip": "Pratik ipucu (yoksa boş)",
+      "link": "Tam URL (yoksa boş)"
+    }
+  ]
+}`,
+          messages:[{role:"user",content:`İşlem: ${process.label}\nKullanıcı durumu: ${situation}\n\n5–8 adım ver, sadece bu duruma özel.`}]
+        })
+      });
+      const data = await r.json();
+      const raw  = (data.content||[]).map(b=>b.text||"").join("");
+      const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
+      setSteps(parsed.steps||[]);
+    } catch {
+      setSteps([{id:1,title:"Bağlantı hatası",detail:"Adımlar yüklenirken sorun oluştu. Sayfayı yenileyin.",doc:"",tip:"",link:""}]);
+    }
+    setLoading(false);
+  }
+
+  const TABS = [
+    {id:"steps", label: steps.length ? `📋 Adımlar (${done}/${steps.length})` : "📋 Adımlar"},
+    {id:"tips",  label:`💬 Topluluk (${tips.length})`},
+    {id:"links", label:"🔗 Linkler"},
+  ];
+
+  const allLinks = [
+    {icon:"🇹🇷", title:"e-Devlet Kapısı",      url:"https://www.turkiye.gov.tr"},
+    ...info.links.map(l=>({icon:"🔗", title:l.l, url:l.url})),
+    {icon:"📮", title:"PTT Şube Bul",           url:"https://www.ptt.gov.tr/subeler"},
+    {icon:"📍", title:"Nüfus Müdürlükleri",     url:"https://www.nvi.gov.tr"},
+  ];
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 py-8 pb-24 fade-up">
+      <button onClick={onBack} className="back-btn border border-gray-200 bg-white px-4 py-2 text-sm font-sans text-gray-500 mb-6 transition-colors">
+        ← Geri
+      </button>
+
+      {/* Title */}
+      <div className="mb-5 pb-5 border-b border-gray-200">
+        <h2 className="font-serif font-bold text-2xl text-ink mb-2">{process.label}</h2>
+        <div className="font-sans text-sm text-gray-600 bg-cream-dark px-3 py-2 border-l-4 border-gold">{situation}</div>
+      </div>
+
+      {/* Cost/Time bar */}
+      <div className="info-bar flex bg-ink px-6 py-4 mb-5 gap-6 items-center">
+        {[["⏱","Tahmini Süre",info.dur],["💰","Tahmini Maliyet",info.cost]].map(([icon,lbl,val],i) => (
+          <React.Fragment key={lbl}>
+            {i>0 && <div className="info-sep w-px self-stretch bg-gray-700" />}
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{icon}</span>
+              <div>
+                <div className="text-gray-500 font-sans text-xs tracking-widest uppercase">{lbl}</div>
+                <div className="text-gold font-sans font-semibold text-sm mt-0.5">{val}</div>
+              </div>
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b-2 border-gray-200 mb-5">
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2.5 font-sans text-sm -mb-0.5 border-b-2 transition-all
+              ${tab===t.id ? "text-ink font-bold border-gold":"text-gray-400 border-transparent hover:text-gray-600"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── STEPS ── */}
+      {tab==="steps" && (
+        <div className="flex flex-col gap-3">
+          {loading ? (
+            <div className="flex flex-col items-center py-16 gap-4">
+              <div className="spin w-10 h-10 rounded-full border-4 border-gray-200 border-t-gold" />
+              <div className="font-sans text-sm text-gray-500">Durumunuza özel adımlar hazırlanıyor…</div>
+            </div>
+          ) : (
+            <>
+              {steps.length>0 && (
+                <div className="relative h-2 bg-gray-200 mb-3">
+                  <div className="progress-fill h-full bg-gold absolute top-0 left-0" style={{width:`${pct}%`}} />
+                  <span className="absolute -top-5 right-0 font-sans text-xs text-gray-400">{pct}% tamamlandı</span>
+                </div>
+              )}
+              {steps.map((step,i) => (
+                <div key={step.id}
+                  className={`step-card border p-5 ${checked[step.id]?"bg-green-50 border-green-200 opacity-70":"bg-white border-gray-200"}`}>
+                  <div className="flex gap-4 items-start">
+                    <button
+                      onClick={() => setChecked(p=>({...p,[step.id]:!p[step.id]}))}
+                      className={`step-circle w-9 h-9 flex-shrink-0 flex items-center justify-center border-2 font-sans font-bold text-sm
+                        ${checked[step.id]?"bg-green-600 border-green-600 text-white":"border-gray-300 text-gray-500 hover:border-gold"}`}>
+                      {checked[step.id]?"✓":i+1}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-sans font-bold text-base text-ink mb-1.5">{step.title}</div>
+                      <div className="font-sans text-sm text-gray-600 leading-relaxed mb-2">{step.detail}</div>
+                      {step.doc && (
+                        <div className="bg-cream-dark px-3 py-2 font-sans text-xs text-gray-600 mb-2 leading-relaxed">
+                          📄 <strong>Belgeler:</strong> {step.doc}
+                        </div>
+                      )}
+                      {step.tip && (
+                        <div className="bg-yellow-50 border border-yellow-200 px-3 py-2 font-sans text-xs text-yellow-800 mb-2 flex gap-2 leading-relaxed">
+                          <span>💡</span><span>{step.tip}</span>
+                        </div>
+                      )}
+                      {step.link && (
+                        <a href={step.link} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-sans text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 hover:bg-blue-100 transition-colors no-underline">
+                          🔗 Doğrudan Başvur →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── TIPS ── */}
+      {tab==="tips" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-sans font-bold text-sm text-ink">Topluluktan Deneyimler</span>
+            <button onClick={() => setTipForm(p=>!p)}
+              className="bg-ink text-gold font-sans text-xs font-bold px-3 py-1.5">
+              + Deneyim Ekle
+            </button>
+          </div>
+
+          {tipForm && (
+            <div className="bg-white border border-dashed border-gold p-4 mb-2 fade-up">
+              <textarea
+                className="w-full p-3 border border-gray-200 font-sans text-sm leading-relaxed bg-gray-50 resize-none mb-3"
+                placeholder="Bu işlemi yaptıysanız başkalarına faydalı bir ipucu paylaşın…"
+                value={newTip} onChange={e=>setNewTip(e.target.value)} rows={3} />
+              <button onClick={()=>{setNewTip("");setTipForm(false);}}
+                className="cta-btn bg-ink text-gold font-serif font-bold px-5 py-2.5 text-sm">
+                Gönder
+              </button>
+            </div>
+          )}
+
+          {tips.length===0 && (
+            <div className="text-center py-12 font-sans text-sm text-gray-400 bg-white border border-dashed border-gray-200">
+              Bu işlem için henüz deneyim yok. İlk paylaşan sen ol!
+            </div>
+          )}
+
+          {tips.map((t,i)=>(
+            <div key={i} className="bg-white border border-gray-200 p-4">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-8 h-8 bg-ink flex items-center justify-center font-serif font-bold text-gold text-sm flex-shrink-0">
+                  {t.user[0]}
+                </div>
+                <div>
+                  <span className="font-sans font-bold text-sm text-ink">{t.user}</span>
+                  <span className="font-sans text-xs text-gray-400"> · {t.loc} · {t.time}</span>
+                </div>
+              </div>
+              <p className="font-sans text-sm text-gray-700 leading-relaxed mb-3">{t.tip}</p>
+              <button onClick={()=>setVotes(p=>({...p,[i]:(p[i]||0)+1}))}
+                className="vote-btn border border-gray-200 px-3 py-1.5 font-sans text-xs text-gray-500 transition-colors">
+                👍 {t.votes+(votes[i]||0)} faydalı buldu
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── LINKS ── */}
+      {tab==="links" && (
+        <div>
+          <p className="text-xs font-sans font-bold tracking-widest text-gold uppercase mb-4">Doğrudan Bağlantılar</p>
+          <div className="flex flex-col gap-2 mb-5">
+            {allLinks.map((l,i)=>(
+              <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+                className="link-card flex items-center gap-4 p-4 bg-white border border-gray-200 no-underline">
+                <span className="text-2xl flex-shrink-0">{l.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-sans font-semibold text-sm text-ink">{l.title}</div>
+                  <div className="font-sans text-xs text-gray-400 truncate">{l.url.replace("https://","")}</div>
+                </div>
+                <span className="text-gold font-bold flex-shrink-0">→</span>
+              </a>
+            ))}
+          </div>
+          <div className="font-sans text-xs text-gray-500 bg-cream-dark px-4 py-3 border-l-4 border-gold leading-relaxed">
+            💡 Tüm linkler resmi kurum sitelerine yönlendirir. Güncel bilgi için ilgili kurumu teyit edin.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── APP ────────────────────────────────────────────────────*/
+function App() {
+  const [screen,    setScreen]    = useState("home");
+  const [cat,       setCat]       = useState(null);
+  const [process,   setProcess]   = useState(null);
+  const [situation, setSituation] = useState("");
+
+  function reset() {
+    setScreen("home"); setCat(null); setProcess(null); setSituation("");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function selectCat(c) {
+    setCat(c); setScreen("process");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function start(p,s) {
+    setProcess(p); setSituation(s); setScreen("guide");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  return (
+    <div className="min-h-screen bg-cream">
+      <Header onReset={reset} />
+
+      {screen==="home"    && <HomeScreen onSelect={selectCat} />}
+      {screen==="process" && cat && <ProcessScreen cat={cat} onBack={()=>setScreen("home")} onStart={start} />}
+      {screen==="guide"   && process && <GuideScreen cat={cat} process={process} situation={situation} onBack={()=>setScreen("process")} />}
+
+      <footer className="bg-ink py-6 px-4 text-center">
+        <div className="font-sans text-sm text-gray-500 mb-1">Hallet · Türkiye Bürokrasi Rehberi</div>
+        <div className="font-sans text-xs text-gray-600">Bu site resmi bir devlet sitesi değildir. Güncel bilgi için ilgili kurumları teyit edin.</div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
