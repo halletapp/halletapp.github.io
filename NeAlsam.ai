@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NeAlsam.ai — Yapay Zeka Hediye Asistani</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#080810;--surface:#0f0f1a;--surface2:#16162a;--border:#ffffff0f;
+  --gold:#c9a163;--gold2:#e8c97a;--gold-dim:#c9a16340;
+  --purple:#7c3aed;--purple2:#a855f7;--purple-dim:#7c3aed25;
+  --white:#f8f8ff;--muted:#6b6b8a;--muted2:#9090b0;
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'DM Sans',sans-serif;
+  --radius:16px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:var(--font-body);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* Grain overlay */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.5}
+
+/* Ambient glow blobs */
+.blob1{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,#7c3aed18 0%,transparent 70%);top:-200px;right:-200px;pointer-events:none;animation:blobFloat 8s ease-in-out infinite alternate}
+.blob2{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,#c9a16312 0%,transparent 70%);bottom:-150px;left:-150px;pointer-events:none;animation:blobFloat 10s ease-in-out infinite alternate-reverse}
+
+@keyframes blobFloat{0%{transform:translate(0,0) scale(1)}100%{transform:translate(30px,20px) scale(1.05)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes scanLine{0%{transform:translateY(-100%)}100%{transform:translateY(400px)}}
+@keyframes glitch{0%,90%,100%{transform:none;opacity:1}93%{transform:skewX(5deg);opacity:.8}96%{transform:skewX(-3deg)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(32px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes borderSpin{to{--angle:360deg}}
+@property --angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+
+.fade-up{animation:fadeUp .5s ease both}
+.fade-up-1{animation:fadeUp .5s .08s ease both}
+.fade-up-2{animation:fadeUp .5s .16s ease both}
+.fade-up-3{animation:fadeUp .5s .24s ease both}
+.fade-in{animation:fadeIn .4s ease both}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:2px}
+
+/* Chip / tag */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:100px;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);font-size:13px;cursor:pointer;transition:all .2s;user-select:none;white-space:nowrap}
+.chip:hover{border-color:var(--gold-dim);color:var(--white)}
+.chip.active{border-color:var(--gold);background:var(--gold-dim);color:var(--gold)}
+.chip-purple.active{border-color:var(--purple2);background:var(--purple-dim);color:var(--purple2)}
+
+/* Budget card */
+.budget-card{flex:1;min-width:120px;padding:14px 10px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center}
+.budget-card:hover{border-color:var(--gold-dim);color:var(--white)}
+.budget-card.active{border-color:var(--gold);background:var(--gold-dim);color:var(--gold);font-weight:600}
+
+/* Primary button */
+.btn-primary{width:100%;padding:18px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--gold) 0%,var(--gold2) 50%,var(--gold) 100%);background-size:200% auto;color:#080810;font-size:16px;font-weight:700;font-family:var(--font-body);cursor:pointer;letter-spacing:.04em;transition:all .3s;position:relative;overflow:hidden}
+.btn-primary:hover{background-position:right center;transform:translateY(-1px);box-shadow:0 8px 32px #c9a16340}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Glass card */
+.glass-card{background:linear-gradient(135deg,#ffffff0a 0%,#ffffff04 100%);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius)}
+
+/* Product card */
+.product-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:all .3s;position:relative}
+.product-card:hover{border-color:#c9a16350;transform:translateY(-4px);box-shadow:0 20px 60px #00000060}
+.product-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#c9a16308,transparent);opacity:0;transition:opacity .3s;pointer-events:none;border-radius:20px}
+.product-card:hover::before{opacity:1}
+
+/* Input */
+.text-input{width:100%;padding:14px 18px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--white);font-size:15px;font-family:var(--font-body);outline:none;transition:border-color .2s}
+.text-input:focus{border-color:var(--gold)}
+.text-input::placeholder{color:var(--muted)}
+
+/* Analysis screen */
+.analysis-container{position:fixed;inset:0;background:var(--black);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:32px}
+.analysis-ring{width:120px;height:120px;border-radius:50%;border:2px solid var(--surface2);position:relative;display:flex;align-items:center;justify-content:center}
+.analysis-ring::before{content:'';position:absolute;inset:-2px;border-radius:50%;border:2px solid transparent;border-top-color:var(--gold);border-right-color:var(--purple2);animation:spin 1.2s linear infinite}
+.analysis-ring::after{content:'';position:absolute;inset:8px;border-radius:50%;border:1px solid var(--surface2)}
+.scan-bar{width:200px;height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;position:relative}
+.scan-bar::after{content:'';position:absolute;height:100%;width:60%;background:linear-gradient(90deg,transparent,var(--gold),var(--purple2),transparent);animation:shimmer 1.5s linear infinite;background-size:200% auto}
+.analysis-text{font-family:var(--font-display);font-size:28px;font-weight:300;letter-spacing:.08em;animation:glitch 3s ease-in-out infinite}
+.analysis-steps{display:flex;flex-direction:column;gap:8px;align-items:center}
+.analysis-step{font-size:13px;color:var(--muted);letter-spacing:.06em;animation:pulse 2s ease-in-out infinite}
+
+/* Section label */
+.section-label{font-size:11px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;font-weight:600;margin-bottom:12px}
+
+/* Match badge */
+.match-badge{position:absolute;top:14px;right:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#080810;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;letter-spacing:.06em}
+
+/* Store button */
+.store-btn{flex:1;padding:11px 8px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body);letter-spacing:.02em;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.store-btn-tr{background:linear-gradient(135deg,#f27a1a,#ff6000);border:none;color:#fff}
+.store-btn-tr:hover{opacity:.88;transform:translateY(-1px)}
+.store-btn-az{background:transparent;border:1px solid var(--border);color:var(--muted2)}
+.store-btn-az:hover{border-color:var(--gold-dim);color:var(--white)}
+
+/* Tag pill */
+.tag-pill{display:inline-block;padding:3px 10px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);font-size:11px;color:var(--muted2);margin:2px}
+
+@media(max-width:640px){
+  .results-grid{grid-template-columns:1fr !important}
+  .budget-row{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="blob1"></div>
+<div class="blob2"></div>
+<div id="root"></div>
+
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+const {Gift,Sparkles,Star,ShoppingBag,ArrowRight,RotateCcw,Heart,Zap,Package,ChevronRight,CheckCircle2}=LucideReact;
+
+/* ===== GIFT DATABASE ===== */
+const GIFTS=[
+  {id:1,name:"Apple AirPods Pro 2",category:"Teknoloji",tags:["muzik","teknoloji","premium"],ageMin:16,ageMax:60,budgetMin:5000,budgetMax:12000,gender:"all",price:"6.499",image:"https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=400&q=80",desc:"Aktif gurultu engelleme, spatiyal ses ve adaptif EQ ile premium deneyim.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:98},
+  {id:2,name:"Kindle Paperwhite",category:"Kitap & Okuma",tags:["okuma","teknoloji","kisisel gelisim"],ageMin:18,ageMax:70,budgetMin:2000,budgetMax:5000,gender:"all",price:"3.299",image:"https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80",desc:"Su gecirmez, parlama yapmayan 300 PPI ekran, haftalar suren pil omru.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:94},
+  {id:3,name:"Lego Architecture Seti",category:"Hobi & Oyun",tags:["yaraticilik","hobi","dekorasyon"],ageMin:12,ageMax:55,budgetMin:800,budgetMax:3000,gender:"all",price:"1.450",image:"https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400&q=80",desc:"Ikonik mimari yapilari insa et, masa ustu sanat eseri yarat.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:91},
+  {id:4,name:"Dyson Airwrap",category:"Guzellik & Bakim",tags:["moda","guzellik","premium"],ageMin:18,ageMax:50,budgetMin:8000,budgetMax:20000,gender:"female",price:"13.990",image:"https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=400&q=80",desc:"Sac kurutma, sekillendirme ve cekici tek cihazda. Isil hasar vermez.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:96},
+  {id:5,name:"Polaroid Now Kamera",category:"Fotograf",tags:["fotograf","sanat","nostalji"],ageMin:14,ageMax:45,budgetMin:1500,budgetMax:4000,gender:"all",price:"2.290",image:"https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80",desc:"Aninda baskili retro kamera. Anlari sonsuza dek kagida dokun.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:89},
+  {id:6,name:"Kahve Aboneligi (3 Ay)",category:"Yiyecek & Icecek",tags:["kahve","gurme","deneyim"],ageMin:18,ageMax:65,budgetMin:500,budgetMax:2000,gender:"all",price:"990",image:"https://images.unsplash.com/photo-1511920170033-f8396924c348?w=400&q=80",desc:"Her ay secilmis tek kokenli kahveler kapiniza gelir. Kahvesever icin mukemmel.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:85},
+  {id:7,name:"Nintendo Switch OLED",category:"Oyun",tags:["oyun","teknoloji","eglence"],ageMin:8,ageMax:40,budgetMin:8000,budgetMax:15000,gender:"all",price:"9.500",image:"https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=400&q=80",desc:"Evde ve disarida oynayin. Parlak OLED ekran, 64 GB depolama.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:93},
+  {id:8,name:"Yoga Mat + Blok Seti",category:"Spor & Saglik",tags:["spor","saglik","minimalist"],ageMin:16,ageMax:60,budgetMin:300,budgetMax:1200,gender:"all",price:"650",image:"https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80",desc:"6mm kaymaz kaucuk mat, 2 cork blok ve omuz baglari dahil. Tam set.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:82},
+  {id:9,name:"Moleskin Premium Defter Seti",category:"Kirtasiye & Tasarim",tags:["yaraticilik","tasarim","kisisel"],ageMin:14,ageMax:70,budgetMin:200,budgetMax:800,gender:"all",price:"450",image:"https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=400&q=80",desc:"3'lu Premium defter seti. Siyah, kahverengi ve seffaf kapak. Italya'dan.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:80},
+  {id:10,name:"Philips Hue Starter Kit",category:"Ev & Dekor",tags:["teknoloji","dekorasyon","ev"],ageMin:20,ageMax:60,budgetMin:2000,budgetMax:5000,gender:"all",price:"3.100",image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",desc:"16 milyon renk, ses & uygulama kontrolu. Evi stüdyoya donustur.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:87},
+  {id:11,name:"Le Labo Santal 33 Parfum",category:"Parfum & Kozmetik",tags:["parfum","luks","moda"],ageMin:18,ageMax:65,budgetMin:3000,budgetMax:10000,gender:"all",price:"5.800",image:"https://images.unsplash.com/photo-1541643600914-78b084683702?w=400&q=80",desc:"Dünyanin en çok fotograflanan parfumu. Odunsu, deri ve sandal agaci.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:92},
+  {id:12,name:"Ember Akilli Kupa",category:"Mutfak & Kahve",tags:["kahve","teknoloji","ev"],ageMin:20,ageMax:65,budgetMin:1500,budgetMax:4000,gender:"all",price:"2.650",image:"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80",desc:"Uygulamayla kontrol edilen sicaklik. Kahveni her zaman tam istedigin isida ic.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:88},
+  {id:13,name:"Ukulele Starter Pack",category:"Muzik",tags:["muzik","hobi","yaraticilik"],ageMin:8,ageMax:45,budgetMin:500,budgetMax:2000,gender:"all",price:"890",image:"https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&q=80",desc:"Mahogani govde, nato sap + notalar kitapcigi + capo. Baslangic icin ideal.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:84},
+  {id:14,name:"Bose QuietComfort 45",category:"Teknoloji",tags:["muzik","teknoloji","seyahat"],ageMin:16,ageMax:65,budgetMin:5000,budgetMax:12000,gender:"all",price:"7.999",image:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80",desc:"Sektornun en iyi gurultu engelleme kulakligi. 24 saat pil, katlanabilir.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:95},
+  {id:15,name:"SPA & Wellness Paketi",category:"Deneyim",tags:["deneyim","saglik","ozel"],ageMin:18,ageMax:70,budgetMin:500,budgetMax:3000,gender:"all",price:"1.200",image:"https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80",desc:"2 kissilik masaj, aromaterapi ve buhar banyosu. Verilen kupon ile kullanilir.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:91},
+  {id:16,name:"Wacom Grafik Tablet",category:"Sanat & Tasarim",tags:["sanat","tasarim","yaraticilik"],ageMin:14,ageMax:50,budgetMin:1500,budgetMax:6000,gender:"all",price:"2.900",image:"https://images.unsplash.com/photo-1561154464-82e9adf32764?w=400&q=80",desc:"Dijital cizim ve tasarim icin profesyonel grafik tablet. Pressure-sensitive kalem.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:90},
+  {id:17,name:"Termos Stanley Klasik",category:"Outdoor & Spor",tags:["outdoor","spor","seyahat"],ageMin:16,ageMax:70,budgetMin:400,budgetMax:1500,gender:"all",price:"850",image:"https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&q=80",desc:"18/8 paslanmaz celik, 24 saat sicak 24 saat soguk. 100 yillik garanti.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:83},
+  {id:18,name:"Chess.com Premium 1 Yil",category:"Strateji & Oyun",tags:["strateji","online","zeka"],ageMin:10,ageMax:80,budgetMin:200,budgetMax:600,gender:"all",price:"350",image:"https://images.unsplash.com/photo-1529699211952-734e80c4d42b?w=400&q=80",desc:"Sinirsiz puzzle, ders ve turnuva erisimi. Satranc ogrenmek icin en iyi platform.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:78},
+  {id:19,name:"Koku Mumu Seti",category:"Ev & Yasam",tags:["ev","dekorasyon","rahatlatici"],ageMin:18,ageMax:70,budgetMin:200,budgetMax:1000,gender:"all",price:"490",image:"https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&q=80",desc:"6 farkli aromali el dokumasi soya mumu koleksiyonu. Ahsap fitil, duman birakmaz.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:81},
+  {id:20,name:"Astronot Lamba",category:"Ev & Dekor",tags:["dekorasyon","teknoloji","estetik"],ageMin:12,ageMax:50,budgetMin:400,budgetMax:1500,gender:"all",price:"720",image:"https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?w=400&q=80",desc:"RGB renkli, uzaktan kumandali uzay temali masa lambasi. Oyun odasi veya cocuk odasi.",trendyol:"https://trendyol.com",amazon:"https://amazon.com.tr",match:86},
+];
+
+/* ===== FILTER LOGIC ===== */
+function findGifts({recipient,age,interests,budget}){
+  const budgetMap={"500":500,"1000":1000,"2000":2000,"5000":5000,"10000":10000,"20000":999999};
+  const maxBudget=budgetMap[budget]||999999;
+  const minBudget=maxBudget===999999?10000:0;
+  const ageNum=parseInt(age)||25;
+
+  let scored=GIFTS.map(g=>{
+    let score=0;
+    if(ageNum>=g.ageMin && ageNum<=g.ageMax) score+=30;
+    const priceNum=parseInt(g.price.replace(",",""));
+    if(priceNum<=maxBudget) score+=25;
+    if(priceNum>=minBudget*0.5) score+=10;
+    if(recipient==="female"&&g.gender==="female") score+=20;
+    else if(recipient!=="female"&&g.gender!=="female") score+=5;
+    const tagHits=(interests||[]).filter(i=>g.tags.includes(i.toLowerCase().replace(" ",""))||g.category.toLowerCase().includes(i.toLowerCase()));
+    score+=tagHits.length*15;
+    score+=Math.random()*8;
+    return{...g,computedScore:score};
+  });
+  scored.sort((a,b)=>b.computedScore-a.computedScore);
+  return scored.slice(0,3);
+}
+
+/* ===== CONSTANTS ===== */
+const RECIPIENTS=[
+  {id:"partner",label:"Esim / Sevgilim",icon:"❤️"},
+  {id:"mother",label:"Annem",icon:"🌸"},
+  {id:"father",label:"Babam",icon:"👔"},
+  {id:"friend",label:"Arkadasim",icon:"🤝"},
+  {id:"sibling",label:"Kardesim",icon:"✨"},
+  {id:"colleague",label:"Is Arkadasi",icon:"💼"},
+  {id:"child",label:"Cocugum",icon:"🌟"},
+];
+
+const INTERESTS=[
+  {id:"teknoloji",label:"Teknoloji",icon:"⚡"},
+  {id:"muzik",label:"Muzik",icon:"🎵"},
+  {id:"sanat",label:"Sanat",icon:"🎨"},
+  {id:"spor",label:"Spor",icon:"🏃"},
+  {id:"kitap",label:"Kitap",icon:"📚"},
+  {id:"moda",label:"Moda",icon:"👗"},
+  {id:"oyun",label:"Oyun",icon:"🎮"},
+  {id:"gurme",label:"Gurme",icon:"🍷"},
+  {id:"seyahat",label:"Seyahat",icon:"✈️"},
+  {id:"ev",label:"Ev Dekoru",icon:"🏠"},
+  {id:"fotograf",label:"Fotograf",icon:"📸"},
+  {id:"outdoor",label:"Outdoor",icon:"🌿"},
+];
+
+const BUDGETS=[
+  {id:"500",label:"500 TL'ye kadar"},
+  {id:"1000",label:"1.000 TL"},
+  {id:"2000",label:"2.000 TL"},
+  {id:"5000",label:"5.000 TL"},
+  {id:"10000",label:"10.000 TL"},
+  {id:"20000",label:"20.000 TL+"},
+];
+
+const ANALYSIS_STEPS=[
+  "Profil analiz ediliyor...",
+  "Ilgi alanlari eslestirilliyor...",
+  "Butce optimizasyonu yapiliyor...",
+  "En uygun hediyeler seciliyor...",
+];
+
+/* ===== ANALYSIS SCREEN ===== */
+function AnalysisScreen({onDone}){
+  const [step,setStep]=useState(0);
+  const [pct,setPct]=useState(0);
+
+  useEffect(()=>{
+    const si=setInterval(()=>setStep(s=>(s+1)%ANALYSIS_STEPS.length),700);
+    const pi=setInterval(()=>setPct(p=>{if(p>=100){clearInterval(pi);return 100;}return p+2;}),55);
+    const t=setTimeout(onDone,3200);
+    return()=>{clearInterval(si);clearInterval(pi);clearTimeout(t)};
+  },[]);
+
+  return(
+    <div className="analysis-container fade-in">
+      <div style={{textAlign:"center"}}>
+        <p style={{fontSize:12,letterSpacing:".2em",color:"var(--muted)",textTransform:"uppercase",marginBottom:32}}>NeAlsam.ai</p>
+        <div className="analysis-ring" style={{margin:"0 auto 32px"}}>
+          <Sparkles size={32} color="var(--gold)" />
+        </div>
+        <p className="analysis-text" style={{fontFamily:"var(--font-display)",fontSize:32,fontWeight:300,marginBottom:8}}>
+          Yapay Zeka Analiz Ediyor
+        </p>
+        <p style={{color:"var(--muted)",fontSize:13,letterSpacing:".06em",marginBottom:36}}>
+          {ANALYSIS_STEPS[step]}
+        </p>
+        <div className="scan-bar" style={{margin:"0 auto 36px"}} />
+        <div style={{width:280,height:2,background:"var(--surface2)",borderRadius:1,margin:"0 auto",overflow:"hidden",position:"relative"}}>
+          <div style={{height:"100%",background:"linear-gradient(90deg,var(--gold),var(--purple2))",width:`${pct}%`,transition:"width .1s linear",borderRadius:1}}/>
+        </div>
+        <p style={{color:"var(--muted)",fontSize:12,marginTop:12}}>{pct}% tamamlandi</p>
+      </div>
+    </div>
+  );
+}
+
+/* ===== PRODUCT CARD ===== */
+function ProductCard({gift,rank,style}){
+  const badgeColors=["#c9a163","#9ca3af","#cd7f32"];
+  const badgeLabels=["En Uygun","2. Secenek","3. Secenek"];
+  return(
+    <div className="product-card" style={{...style,animationDelay:`${rank*0.12}s`,animation:"cardIn .6s ease both"}}>
+      {/* Image */}
+      <div style={{position:"relative",paddingTop:"62%",overflow:"hidden"}}>
+        <img src={gift.image} alt={gift.name} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s"}}
+          onMouseOver={e=>e.currentTarget.style.transform="scale(1.04)"}
+          onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}/>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 50%,#0f0f1a)"}}/>
+        {/* Rank badge */}
+        <div style={{position:"absolute",top:14,left:14,background:badgeColors[rank],color:"#080810",fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:100,letterSpacing:".06em"}}>
+          {badgeLabels[rank]}
+        </div>
+        {/* Match */}
+        <div style={{position:"absolute",top:14,right:14,background:"rgba(0,0,0,.7)",backdropFilter:"blur(8px)",border:"1px solid var(--border)",color:"var(--gold)",fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:100}}>
+          {gift.match}% eslesme
+        </div>
+        {/* Category */}
+        <div style={{position:"absolute",bottom:14,left:14}}>
+          <span className="tag-pill" style={{background:"rgba(0,0,0,.7)",backdropFilter:"blur(8px)"}}>{gift.category}</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{padding:"20px 20px 22px"}}>
+        <h3 style={{fontFamily:"var(--font-display)",fontSize:22,fontWeight:600,marginBottom:8,lineHeight:1.2}}>{gift.name}</h3>
+        <p style={{fontSize:13,color:"var(--muted2)",lineHeight:1.6,marginBottom:16}}>{gift.desc}</p>
+
+        {/* Tags */}
+        <div style={{marginBottom:18,display:"flex",flexWrap:"wrap",gap:4}}>
+          {gift.tags.map(t=><span key={t} className="tag-pill">{t}</span>)}
+        </div>
+
+        {/* Price */}
+        <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:18}}>
+          <span style={{fontFamily:"var(--font-display)",fontSize:30,fontWeight:600,color:"var(--gold)"}}>{gift.price}</span>
+          <span style={{color:"var(--muted)",fontSize:14}}>TL</span>
+          <span style={{marginLeft:"auto",color:"var(--muted2)",fontSize:12,display:"flex",alignItems:"center",gap:4}}>
+            <Star size={11} fill="var(--gold)" stroke="var(--gold)"/> 4.8 (2.4k)
+          </span>
+        </div>
+
+        {/* Buttons */}
+        <div style={{display:"flex",gap:8}}>
+          <a href={gift.trendyol} target="_blank" rel="noopener noreferrer" className="store-btn store-btn-tr">
+            <ShoppingBag size={14}/> Trendyol'da Incele
+          </a>
+          <a href={gift.amazon} target="_blank" rel="noopener noreferrer" className="store-btn store-btn-az">
+            Amazon <ArrowRight size={12}/>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== MAIN APP ===== */
+function App(){
+  const [screen,setScreen]=useState("form"); // form | analyzing | results
+  const [form,setForm]=useState({recipient:"",age:"",interests:[],budget:""});
+  const [results,setResults]=useState([]);
+
+  function toggleInterest(id){
+    setForm(f=>({...f,interests:f.interests.includes(id)?f.interests.filter(x=>x!==id):[...f.interests,id]}));
+  }
+
+  function canSubmit(){
+    return form.recipient && form.age && form.budget;
+  }
+
+  function handleSubmit(){
+    if(!canSubmit()) return;
+    setScreen("analyzing");
+  }
+
+  function handleAnalysisDone(){
+    const r=findGifts({recipient:form.recipient,age:form.age,interests:form.interests,budget:form.budget});
+    setResults(r);
+    setScreen("results");
+  }
+
+  function reset(){
+    setScreen("form");
+    setForm({recipient:"",age:"",interests:[],budget:""});
+    setResults([]);
+  }
+
+  /* ---- FORM SCREEN ---- */
+  if(screen==="form") return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+      {/* Header */}
+      <header style={{padding:"28px 24px 0",maxWidth:760,margin:"0 auto",width:"100%"}}>
+        <div className="fade-up" style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,var(--gold),var(--purple2))",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Gift size={18} color="#fff"/>
+          </div>
+          <span style={{fontFamily:"var(--font-display)",fontSize:22,fontWeight:700,letterSpacing:".04em"}}>NeAlsam.ai</span>
+          <span style={{marginLeft:8,background:"var(--surface2)",border:"1px solid var(--border)",color:"var(--gold)",fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:100,letterSpacing:".1em"}}>BETA</span>
+        </div>
+        <p className="fade-up-1" style={{color:"var(--muted)",fontSize:13,letterSpacing:".04em"}}>Yapay Zeka Destekli Hediye Asistani</p>
+      </header>
+
+      {/* Hero */}
+      <div style={{maxWidth:760,margin:"0 auto",width:"100%",padding:"48px 24px 0"}}>
+        <h1 className="fade-up" style={{fontFamily:"var(--font-display)",fontSize:"clamp(38px,6vw,64px)",fontWeight:300,lineHeight:1.08,marginBottom:16}}>
+          Mükemmel hediyeyi<br/>
+          <em style={{fontStyle:"italic",background:"linear-gradient(135deg,var(--gold),var(--purple2))",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>saniyeler icinde</em> bul.
+        </h1>
+        <p className="fade-up-1" style={{fontSize:16,color:"var(--muted2)",lineHeight:1.7,maxWidth:480,marginBottom:48}}>
+          Kime alacagini, yasini ve butceni sec. Yapay zeka en uygun 3 hediyeyi sana ozel secsin.
+        </p>
+
+        {/* FORM */}
+        <div className="fade-up-2" style={{display:"flex",flexDirection:"column",gap:32}}>
+
+          {/* Step 1 — Recipient */}
+          <div>
+            <p className="section-label">Kime hediye aliyorsun?</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {RECIPIENTS.map(r=>(
+                <button key={r.id} className={`chip${form.recipient===r.id?" active":""}`}
+                  onClick={()=>setForm(f=>({...f,recipient:r.id}))}>
+                  <span>{r.icon}</span>{r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 2 — Age */}
+          <div>
+            <p className="section-label">Kacinda?</p>
+            <input className="text-input" type="number" placeholder="Yas girin (ornek: 28)"
+              value={form.age} onChange={e=>setForm(f=>({...f,age:e.target.value}))}
+              style={{maxWidth:280}} min="1" max="120"/>
+          </div>
+
+          {/* Step 3 — Interests */}
+          <div>
+            <p className="section-label">Ilgi alanlari (birden fazla secebilirsin)</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {INTERESTS.map(i=>(
+                <button key={i.id} className={`chip chip-purple${form.interests.includes(i.id)?" active":""}`}
+                  onClick={()=>toggleInterest(i.id)}>
+                  <span>{i.icon}</span>{i.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Step 4 — Budget */}
+          <div>
+            <p className="section-label">Butce ne kadar?</p>
+            <div className="budget-row" style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {BUDGETS.map(b=>(
+                <button key={b.id} className={`budget-card${form.budget===b.id?" active":""}`}
+                  onClick={()=>setForm(f=>({...f,budget:b.id}))}>
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button className="btn-primary" onClick={handleSubmit} disabled={!canSubmit()}
+            style={{marginTop:8,maxWidth:400}}>
+            <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+              <Sparkles size={18}/> Hediyemi Bul
+            </span>
+          </button>
+
+          <p style={{fontSize:12,color:"var(--muted)",textAlign:"center",maxWidth:400,lineHeight:1.6}}>
+            Yapay zeka 20'den fazla urun arasindan senin icin en uygun 3'unu secer.
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={{marginTop:"auto",padding:"40px 24px 28px",textAlign:"center"}}>
+        <p style={{fontSize:12,color:"var(--muted)"}}>NeAlsam.ai &mdash; Yapay Zeka Hediye Asistani &bull; 2025</p>
+      </footer>
+    </div>
+  );
+
+  /* ---- ANALYZING ---- */
+  if(screen==="analyzing") return <AnalysisScreen onDone={handleAnalysisDone}/>;
+
+  /* ---- RESULTS ---- */
+  if(screen==="results") return(
+    <div style={{minHeight:"100vh"}}>
+      {/* Results header */}
+      <div style={{background:"var(--surface)",borderBottom:"1px solid var(--border)",padding:"20px 24px",position:"sticky",top:0,zIndex:10,backdropFilter:"blur(20px)"}}>
+        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,var(--gold),var(--purple2))",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <Gift size={16} color="#fff"/>
+            </div>
+            <span style={{fontFamily:"var(--font-display)",fontSize:18,fontWeight:700}}>NeAlsam.ai</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <CheckCircle2 size={16} color="var(--gold)"/>
+            <span style={{fontSize:13,color:"var(--muted2)"}}>
+              {RECIPIENTS.find(r=>r.id===form.recipient)?.label} icin &bull; {form.age} yas &bull; {BUDGETS.find(b=>b.id===form.budget)?.label}
+            </span>
+          </div>
+          <button onClick={reset}
+            style={{display:"flex",alignItems:"center",gap:6,background:"var(--surface2)",border:"1px solid var(--border)",color:"var(--muted2)",padding:"8px 14px",borderRadius:100,fontSize:13,cursor:"pointer",fontFamily:"var(--font-body)",transition:"all .2s"}}
+            onMouseOver={e=>{e.currentTarget.style.borderColor="var(--gold-dim)";e.currentTarget.style.color="var(--white)"}}
+            onMouseOut={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted2)"}}>
+            <RotateCcw size={13}/> Yeniden Ara
+          </button>
+        </div>
+      </div>
+
+      {/* Results body */}
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"52px 24px 80px"}}>
+        <div className="fade-up" style={{marginBottom:48}}>
+          <p style={{fontSize:12,letterSpacing:".2em",color:"var(--gold)",textTransform:"uppercase",marginBottom:12,fontWeight:600}}>Yapay Zeka Sonuclari</p>
+          <h2 style={{fontFamily:"var(--font-display)",fontSize:"clamp(28px,4vw,44px)",fontWeight:300,lineHeight:1.15,marginBottom:12}}>
+            Senin icin <em style={{fontStyle:"italic"}}>en uygun 3 hediye</em> secildi.
+          </h2>
+          <p style={{color:"var(--muted2)",fontSize:15,lineHeight:1.65,maxWidth:560}}>
+            Profil analizine gore asagidaki urunler en yuksek uyum skorunu aldi. Trendyol veya Amazon'da inceleyebilirsin.
+          </p>
+        </div>
+
+        {/* Cards grid */}
+        <div className="results-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,alignItems:"start"}}>
+          {results.map((g,i)=><ProductCard key={g.id} gift={g} rank={i}/>)}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="fade-up" style={{marginTop:56,textAlign:"center"}}>
+          <div className="glass-card" style={{display:"inline-flex",alignItems:"center",gap:16,padding:"18px 32px"}}>
+            <Zap size={18} color="var(--gold)"/>
+            <span style={{fontSize:14,color:"var(--muted2)"}}>Daha fazla seceneek gormek ister misin?</span>
+            <button onClick={reset}
+              style={{background:"linear-gradient(135deg,var(--gold),var(--gold2))",border:"none",color:"#080810",padding:"8px 18px",borderRadius:100,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-body)",display:"flex",alignItems:"center",gap:6}}>
+              Tekrar Ara <ChevronRight size={13}/>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer style={{padding:"24px",textAlign:"center",borderTop:"1px solid var(--border)"}}>
+        <p style={{fontSize:12,color:"var(--muted)"}}>NeAlsam.ai &mdash; Urunler affiliate linkler icerebilir. &copy; 2025</p>
+      </footer>
+    </div>
+  );
+
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
